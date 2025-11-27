@@ -13,6 +13,10 @@ const app = express();
 
 // Middleware global
 app.use(cors());
+app.use(cors({
+    origin: '*', // sau lista de domenii permise, ex: ['https://app-ta.vercel.app']
+    credentials: false
+}));
 app.use(express.json());
 
 // Rute
