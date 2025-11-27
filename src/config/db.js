@@ -1,16 +1,25 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 const dotenv = require('dotenv');
 
 dotenv.config();
 
+// Calea către DB – env sau default ./data/buget.db
 const dbPath = process.env.DB_FILE || './data/buget.db';
+
+// Ne asigurăm că folderul există (ex: ./data)
+const dir = path.dirname(dbPath);
+if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+    console.log('Am creat directorul pentru baza de date:', dir);
+}
 
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) {
         console.error('Eroare la conectarea la baza de date:', err.message);
     } else {
-        console.log('Conectat la baza de date SQLite.');
+        console.log('Conectat la baza de date SQLite:', dbPath);
 
         // Creăm tabelele dacă nu există
         db.run(`
