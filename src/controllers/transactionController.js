@@ -1,41 +1,42 @@
-const db = require('../config/db');
+const pool = require('../config/db');
 
-exports.addTransaction = (req, res) => {
-    const userId = req.user.id;
-    const { debt_id, amount, date, note } = req.body;
+exports.addTransaction = async (req, res) => {
+  const userId = req.user.id;
+  const { debt_id, amount, date, note } = req.body;
 
-    if (!amount || !date) {
-        return res.status(400).json({ message: "Amount și date sunt necesare." });
-    }
+  if (!amount || !date) {
+    return res
+      .status(400)
+      .json({ message: 'Amount și date sunt necesare.' });
+  }
 
-    db.run(
-        `INSERT INTO transactions (user_id, debt_id, amount, date, note)
-     VALUES (?, ?, ?, ?, ?)`,
-        [userId, debt_id || null, amount, date, note || null],
-        function (err) {
-            if (err) return res.status(500).json({ message: "Eroare la adăugarea tranzacției." });
-
-            res.status(201).json({
-                id: this.lastID,
-                user_id: userId,
-                debt_id,
-                amount,
-                date,
-                note
-            });
-        }
+  try {
+    const result = await pool.query(
+      `INSERT INTO transactions (user_id, debt_id, amount, date, note)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, user_id, debt_id, amount, date, note`,
+      [userId, debt_id || null, amount, date, note || null]
     );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Eroare addTransaction:', err);
+    res.status(500).json({ message: 'Eroare la adăugarea tranzacției.' });
+  }
 };
 
-exports.getTransactions = (req, res) => {
-    const userId = req.user.id;
+exports.getTransactions = async (req, res) => {
+  const userId = req.user.id;
 
-    db.all(
-        "SELECT * FROM transactions WHERE user_id = ? ORDER BY date DESC",
-        [userId],
-        (err, rows) => {
-            if (err) return res.status(500).json({ message: "Eroare la listarea tranzacțiilor." });
-            res.json({ transactions: rows });
-        }
+  try {
+    const result = await pool.query(
+      'SELECT * FROM transactions WHERE user_id = $1 ORDER BY date DESC',
+      [userId]
     );
+
+    res.json({ transactions: result.rows });
+  } catch (err) {
+    console.error('Eroare getTransactions:', err);
+    res.status(500).json({ message: 'Eroare la listarea tranzacțiilor.' });
+  }
 };

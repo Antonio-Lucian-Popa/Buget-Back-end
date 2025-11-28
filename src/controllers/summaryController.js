@@ -1,74 +1,78 @@
-const db = require('../config/db');
+const pool = require('../config/db');
 const dayjs = require('dayjs');
 
-exports.getMonthlySummary = (req, res) => {
-    const userId = req.user.id;
+exports.getMonthlySummary = async (req, res) => {
+  const userId = req.user.id;
+  const nowMonth = dayjs().format('YYYY-MM'); // ex: 2025-02
 
-    const nowMonth = dayjs().format("YYYY-MM");
-
-    db.all(
-        "SELECT * FROM incomes WHERE user_id = ? AND date LIKE ?",
-        [userId, `${nowMonth}%`],
-        (err, incomes) => {
-            if (err) return res.status(500).json({ message: "Eroare veniturile." });
-
-            db.all(
-                "SELECT * FROM debts WHERE user_id = ? AND due_date LIKE ?",
-                [userId, `${nowMonth}%`],
-                (err2, debts) => {
-                    if (err2) return res.status(500).json({ message: "Eroare datoriile." });
-
-                    const totalIncome = incomes.reduce((s, v) => s + v.amount, 0);
-                    const totalDebts = debts.reduce((s, d) => s + d.amount, 0);
-
-                    const remaining = totalIncome - totalDebts;
-
-                    res.json({
-                        month: nowMonth,
-                        totalIncome,
-                        totalDebts,
-                        remaining,
-                        incomes,
-                        debts
-                    });
-                }
-            );
-        }
+  try {
+    const incomesRes = await pool.query(
+      "SELECT * FROM incomes WHERE user_id = $1 AND to_char(date, 'YYYY-MM') = $2",
+      [userId, nowMonth]
     );
+
+    const debtsRes = await pool.query(
+      "SELECT * FROM debts WHERE user_id = $1 AND to_char(due_date, 'YYYY-MM') = $2",
+      [userId, nowMonth]
+    );
+
+    const incomes = incomesRes.rows;
+    const debts = debtsRes.rows;
+
+    const totalIncome = incomes.reduce((s, v) => s + Number(v.amount), 0);
+    const totalDebts = debts.reduce((s, d) => s + Number(d.amount), 0);
+    const remaining = totalIncome - totalDebts;
+
+    res.json({
+      month: nowMonth,
+      totalIncome,
+      totalDebts,
+      remaining,
+      incomes,
+      debts,
+    });
+  } catch (err) {
+    console.error('Eroare getMonthlySummary:', err);
+    res.status(500).json({ message: 'Eroare la summary curent.' });
+  }
 };
 
+exports.getNextMonthSummary = async (req, res) => {
+  const userId = req.user.id;
+  const nextMonth = dayjs().add(1, 'month').format('YYYY-MM');
 
-exports.getNextMonthSummary = (req, res) => {
-    const userId = req.user.id;
-    const nextMonth = dayjs().add(1, 'month').format("YYYY-MM");
-
-    db.all(
-        "SELECT * FROM incomes WHERE user_id = ? AND (is_recurring = 1 OR date LIKE ?)",
-        [userId, `${nextMonth}%`],
-        (err, incomes) => {
-            if (err) return res.status(500).json({ message: "Eroare veniturile luna viitoare." });
-
-            db.all(
-                "SELECT * FROM debts WHERE user_id = ? AND (is_recurring = 1 OR due_date LIKE ?)",
-                [userId, `${nextMonth}%`],
-                (err2, debts) => {
-                    if (err2) return res.status(500).json({ message: "Eroare datoriile luna viitoare." });
-
-                    const totalIncome = incomes.reduce((s, v) => s + v.amount, 0);
-                    const totalDebts = debts.reduce((s, d) => s + d.amount, 0);
-
-                    const remaining = totalIncome - totalDebts;
-
-                    res.json({
-                        month: nextMonth,
-                        totalIncome,
-                        totalDebts,
-                        remaining,
-                        incomes,
-                        debts
-                    });
-                }
-            );
-        }
+  try {
+    const incomesRes = await pool.query(
+      `SELECT * FROM incomes
+       WHERE user_id = $1
+       AND (is_recurring = TRUE OR to_char(date, 'YYYY-MM') = $2)`,
+      [userId, nextMonth]
     );
+
+    const debtsRes = await pool.query(
+      `SELECT * FROM debts
+       WHERE user_id = $1
+       AND (is_recurring = TRUE OR to_char(due_date, 'YYYY-MM') = $2)`,
+      [userId, nextMonth]
+    );
+
+    const incomes = incomesRes.rows;
+    const debts = debtsRes.rows;
+
+    const totalIncome = incomes.reduce((s, v) => s + Number(v.amount), 0);
+    const totalDebts = debts.reduce((s, d) => s + Number(d.amount), 0);
+    const remaining = totalIncome - totalDebts;
+
+    res.json({
+      month: nextMonth,
+      totalIncome,
+      totalDebts,
+      remaining,
+      incomes,
+      debts,
+    });
+  } catch (err) {
+    console.error('Eroare getNextMonthSummary:', err);
+    res.status(500).json({ message: 'Eroare la summary luna viitoare.' });
+  }
 };
