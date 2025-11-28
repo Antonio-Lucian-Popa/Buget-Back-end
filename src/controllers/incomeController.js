@@ -50,3 +50,25 @@ exports.getIncomes = async (req, res) => {
     res.status(500).json({ message: 'Eroare la listarea veniturilor.' });
   }
 };
+
+// deleteIncome
+exports.deleteIncome = async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      'DELETE FROM incomes WHERE id = $1 AND user_id = $2',
+      [id, userId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Venit inexistent sau nu aparține acestui user.' });
+    }
+
+    res.json({ message: 'Venit șters cu succes.' });
+  } catch (err) {
+    console.error('Eroare deleteIncome:', err);
+    res.status(500).json({ message: 'Eroare la ștergerea venitului.' });
+  }
+};
