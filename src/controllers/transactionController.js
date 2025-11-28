@@ -34,9 +34,15 @@ exports.getTransactions = async (req, res) => {
       [userId]
     );
 
-    res.json({ transactions: result.rows });
+    const transactions = result.rows.map((row) => ({
+      ...row,
+      amount: Number(row.amount), // <- AICI
+    }));
+
+    res.json({ transactions });
   } catch (err) {
     console.error('Eroare getTransactions:', err);
     res.status(500).json({ message: 'Eroare la listarea tranzacțiilor.' });
   }
 };
+

@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 
+// createIncome
 exports.createIncome = async (req, res) => {
   const userId = req.user.id;
   const { amount, description, date, is_recurring = false } = req.body;
@@ -18,13 +19,17 @@ exports.createIncome = async (req, res) => {
       [userId, amount, description || null, date, is_recurring]
     );
 
-    res.status(201).json(result.rows[0]);
+    const income = result.rows[0];
+    income.amount = Number(income.amount); // <- AICI
+
+    res.status(201).json(income);
   } catch (err) {
     console.error('Eroare createIncome:', err);
     res.status(500).json({ message: 'Eroare la adăugarea venitului.' });
   }
 };
 
+// getIncomes
 exports.getIncomes = async (req, res) => {
   const userId = req.user.id;
 
@@ -34,30 +39,14 @@ exports.getIncomes = async (req, res) => {
       [userId]
     );
 
-    res.json({ incomes: result.rows });
+    const incomes = result.rows.map((row) => ({
+      ...row,
+      amount: Number(row.amount), // <- AICI
+    }));
+
+    res.json({ incomes });
   } catch (err) {
     console.error('Eroare getIncomes:', err);
     res.status(500).json({ message: 'Eroare la listarea veniturilor.' });
-  }
-};
-
-exports.deleteIncome = async (req, res) => {
-  const userId = req.user.id;
-  const { id } = req.params;
-
-  try {
-    const result = await pool.query(
-      'DELETE FROM incomes WHERE id = $1 AND user_id = $2',
-      [id, userId]
-    );
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({ message: 'Venit inexistent.' });
-    }
-
-    res.json({ message: 'Venit șters.' });
-  } catch (err) {
-    console.error('Eroare deleteIncome:', err);
-    res.status(500).json({ message: 'Eroare la ștergere.' });
   }
 };
