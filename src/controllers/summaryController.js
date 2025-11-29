@@ -16,11 +16,19 @@ exports.getMonthlySummary = async (req, res) => {
       [userId, nowMonth]
     );
 
-    const incomes = incomesRes.rows;
-    const debts = debtsRes.rows;
+    // 🔴 AICI facem transformarea
+    const incomes = incomesRes.rows.map((row) => ({
+      ...row,
+      amount: Number(row.amount),
+    }));
 
-    const totalIncome = incomes.reduce((s, v) => s + Number(v.amount), 0);
-    const totalDebts = debts.reduce((s, d) => s + Number(d.amount), 0);
+    const debts = debtsRes.rows.map((row) => ({
+      ...row,
+      amount: Number(row.amount),
+    }));
+
+    const totalIncome = incomes.reduce((s, v) => s + v.amount, 0);
+    const totalDebts = debts.reduce((s, d) => s + d.amount, 0);
     const remaining = totalIncome - totalDebts;
 
     res.json({
@@ -56,11 +64,19 @@ exports.getNextMonthSummary = async (req, res) => {
       [userId, nextMonth]
     );
 
-    const incomes = incomesRes.rows;
-    const debts = debtsRes.rows;
+    // 🔴 ȘI AICI la fel
+    const incomes = incomesRes.rows.map((row) => ({
+      ...row,
+      amount: Number(row.amount),
+    }));
 
-    const totalIncome = incomes.reduce((s, v) => s + Number(v.amount), 0);
-    const totalDebts = debts.reduce((s, d) => s + Number(d.amount), 0);
+    const debts = debtsRes.rows.map((row) => ({
+      ...row,
+      amount: Number(row.amount),
+    }));
+
+    const totalIncome = incomes.reduce((s, v) => s + v.amount, 0);
+    const totalDebts = debts.reduce((s, d) => s + d.amount, 0);
     const remaining = totalIncome - totalDebts;
 
     res.json({
